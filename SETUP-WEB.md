@@ -325,7 +325,25 @@ Botón de ajustes (arriba a la derecha):
 
 ---
 
-## 7. Actualizar la página
+## 7. Para alumnos: índice publicado (pestaña de Teams)
+
+Sin servidor: el Encuéntralo de la profe sube `docs/indice.json` a su repositorio con la API de GitHub (token
+*fine-grained* con **Contents: Read and write** solo sobre ese repositorio). GitHub Pages lo publica, y la página
+abierta sin carpeta elegida, o con `?alumnos`, entra en **modo consulta**: solo buscar, filtrar y abrir en SharePoint.
+
+- Se publica solo tras cada escaneo, edición o cambio de ajustes, si el índice ha cambiado. También con **Publicar
+  ahora**.
+- Incluye lo que no está oculto: nombre, carpeta, fecha, módulo, unidades, etiquetas, notas, el enlace de SharePoint
+  ya calculado y, si se marca, hasta 40 000 caracteres de texto por documento.
+- **Es público**, como toda la web de GitHub Pages gratuita. Los archivos no: se abren en SharePoint con inicio de sesión.
+- **El repositorio original (`jbooruiz/encuentralo-web`) no debe tener nunca un `docs/indice.json`.** Si lo tuviera,
+  al hacer **Sync fork** chocaría con el de cada profe. Publica solo desde copias (forks).
+
+Paso a paso para la profe: [GUIA-PROFE.md, sección 10](GUIA-PROFE.md#10-para-tus-alumnos-pestaña-de-teams).
+
+---
+
+## 8. Actualizar la página
 
 Los cambios en `docs/` se publican solos al hacer push a la rama publicada. Tardan un par de minutos.
 

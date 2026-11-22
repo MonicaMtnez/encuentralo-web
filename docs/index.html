@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="motor.js" defer></script>
+<script src="publicar.js" defer></script>
 <script src="app.js" defer></script>
 </head>
 <body>
@@ -154,6 +155,23 @@
       <label>Temas <textarea id="reglasTemas" rows="10" spellcheck="false"></textarea></label>
     </div>
     <label>Subcarpetas que no cuentan como tema <input id="temasIgn" placeholder="General, Documentos…"></label>
+
+    <h3>Publicar para alumnos</h3>
+    <p class="hint">Tus alumnos pueden buscar en estos documentos desde una pestaña de Teams, sin configurar nada: cada vez que abras Encuéntralo y haya cambios, se sube el índice a tu repositorio de GitHub. Al pulsar un documento lo abren en el SharePoint de la clase con su cuenta. Pasos para crear el token: GUIA-PROFE.md, sección 10.</p>
+    <p class="hint aviso-pub">El índice publicado es público: cualquiera con la dirección ve los nombres, carpetas y (si lo marcas) el texto de los documentos. Los archivos no: siguen en SharePoint.</p>
+    <div class="row2">
+      <label>Token de GitHub <input type="password" id="pubToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></label>
+      <label>Repositorio <input id="pubRepo" placeholder="usuario/repositorio" spellcheck="false"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="pubTexto"> Incluir el texto de los documentos (para que puedan buscar dentro)</label>
+    <label class="check"><input type="checkbox" id="pubAuto"> Publicar automáticamente cuando haya cambios</label>
+    <div class="botones">
+      <button type="button" id="pubAhora">Publicar ahora</button>
+    </div>
+    <p class="hint" id="pubEstado"></p>
+    <label>Dirección para la pestaña de Teams
+      <div class="addrow"><input id="pubUrl" readonly><button type="button" id="pubCopiar">Copiar</button></div>
+    </label>
 
     <h3>Copia de seguridad</h3>
     <p class="hint">Guarda tus ajustes, etiquetas editadas, notas y ocultos en un archivo. Sirve si borras los datos del navegador o cambias de ordenador (el texto de los documentos se vuelve a sacar solo).</p>

@@ -8,6 +8,8 @@ if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.clo
 
 const st = { vista: "", q: "", modulo: "", unidades: [], temas: [], herrs: [], seccion: "", mes: "", ext: "", reciente: 0, orden: "", mostrados: 0 };
 const POR_PAGINA = 60;
+// modo consulta (alumnos): índice publicado por la profe, solo para buscar y abrir en SharePoint
+let CONSULTA = null;  // { generado } cuando está activo
 const guardado = (k, def) => { try { return localStorage.getItem(k) || def; } catch { return def; } };
 const guardarLS = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 let vistaLista = guardado("ix_vista", "lista");
@@ -154,7 +156,7 @@ function pintar(append = false) {
   ul.innerHTML = "";
   if (!res.length) {
     ul.innerHTML = `<li class="vacio">${!DOCS.size
-      ? (ESC.activo ? "<b>Leyendo tus documentos…</b><br>Van apareciendo aquí según se indexan." : "<b>Aún no hay documentos.</b><br>Elige tu carpeta de apuntes para empezar.")
+      ? CONSULTA ? "<b>Todavía no hay documentos publicados.</b>" : (ESC.activo ? "<b>Leyendo tus documentos…</b><br>Van apareciendo aquí según se indexan." : "<b>Aún no hay documentos.</b><br>Elige tu carpeta de apuntes para empezar.")
       : "No hay documentos con estos filtros."}</li>`;
   }
   const agrupar = orden === "fecha" || orden === "fecha_asc";
@@ -178,8 +180,9 @@ function tarjeta(d, snip, hoy) {
   const li = document.createElement("li");
   li.className = "doc" + (d.estado !== "ok" ? " fuera" : "");
   const ext = (d.ext || "").replace(".", "");
-  const sp = d.enlace ? "" : urlSharepoint(d);
-  const nuevo = (d.detectado || "").slice(0, 10) === hoy;
+  const sp = d.enlace ? "" : CONSULTA ? d.sp : urlSharepoint(d);
+  // para los alumnos, "nuevo" es lo de los últimos 3 días (la profe publica de vez en cuando)
+  const nuevo = CONSULTA ? !!d.detectado && d.detectado >= isoLocal(new Date(Date.now() - 3 * 864e5)) : (d.detectado || "").slice(0, 10) === hoy;
   const estado = d.estado === "oculto" ? "<b>oculto</b>" : d.estado === "desaparecido" ? "<b>ya no está en la carpeta</b>" : "";
   const titulo = d.enlace ? d.nombre.replace(/\.(url|webloc)$/i, "") : d.nombre;
   li.innerHTML = `
@@ -189,9 +192,9 @@ function tarjeta(d, snip, hoy) {
         ${d.modulo ? `<span class="badge mod ${col(d.modulo)}" data-mod="${esc(d.modulo)}">${esc(d.modulo)}</span>` : ""}
         ${d.unidades.map((u) => `<span class="badge ud" data-ud="${esc(u)}">${esc(u)}</span>`).join("")}
       </div>
-      <h4><a data-act="${d.enlace ? "enlace" : sp ? "sharepoint" : "ver"}" title="${esc(d.enlace || (sp ? "Abrir en el SharePoint de la clase" : "Ver"))}">${esc(titulo)}</a></h4>
+      <h4><a data-act="${d.enlace ? "enlace" : sp ? "sharepoint" : CONSULTA ? "" : "ver"}" title="${esc(d.enlace || (sp ? "Abrir en el SharePoint de la clase" : CONSULTA ? "" : "Ver"))}">${esc(titulo)}</a></h4>
       <div class="meta">
-        <span>📅 ${fmtFecha(d.fecha)}</span>${d.carpeta ? `<span>${esc(nombreCarpeta(d.carpeta).replace(/\//g, " › "))}</span>` : ""}
+        <span>📅 ${fmtFecha(d.fecha)}</span>${d.carpeta ? `<span>${esc(nombreCarpeta(d.carpeta.replace(/^(documentos|documentos compartidos|shared documents)\/(?=.)/i, "")).replace(/\//g, " › "))}</span>` : ""}
         <span>${d.enlace ? "🔗 " + esc(dominio(d.enlace)) : fmtTam(d.tamano)}</span>
         ${nuevo ? '<span class="nuevo">nuevo</span>' : ""}${estado ? `<span>${estado}</span>` : ""}
       </div>
@@ -203,7 +206,10 @@ function tarjeta(d, snip, hoy) {
       ${d.notas ? `<div class="notas">📝 ${esc(d.notas)}</div>` : ""}
     </div>
     <div class="btns">
-      ${d.estado === "ok" ? `${d.enlace
+      ${CONSULTA ? (d.enlace
+        ? `<button data-act="enlace" title="${esc(d.enlace)}">${svg("enlace")}<span class="lbl">Abrir enlace</span></button>`
+        : sp ? `<button data-act="sharepoint" title="Abrir en el SharePoint de la clase">${svg("externo")}<span class="lbl">Abrir</span></button>` : "")
+      : d.estado === "ok" ? `${d.enlace
         ? `<button data-act="enlace" title="${esc(d.enlace)}">${svg("enlace")}<span class="lbl">Abrir enlace</span></button>`
         : `${sp ? `<button data-act="sharepoint" title="Abrir en el SharePoint de la clase">${svg("externo")}<span class="lbl">SharePoint</span></button>` : ""}
       <button data-act="ver" title="${FUENTE?.tipo === "onedrive" ? "Ver en OneDrive" : "Ver"}">${svg("ver")}<span class="lbl">Ver</span></button>
@@ -282,7 +288,8 @@ function pintarDatalists() {
 // estado del escaneo (abajo a la izquierda) y avisos (arriba de la lista)
 function pintarEstado() {
   let txt;
-  if (ESC.activo) txt = `Escaneando… ${ESC.vistos} archivos${ESC.actual ? " · " + ESC.actual : ""}`;
+  if (CONSULTA) txt = CONSULTA.generado ? `Actualizado el ${fmtFecha(CONSULTA.generado.slice(0, 10))} a las ${CONSULTA.generado.slice(11, 16)}` : "";
+  else if (ESC.activo) txt = `Escaneando… ${ESC.vistos} archivos${ESC.actual ? " · " + ESC.actual : ""}`;
   else if (ESC.error) txt = "Error al escanear: " + ESC.error;
   else if (ESC.ultimo) txt = `Actualizado a las ${hora(ESC.ultimo)}` + (ESC.nuevos ? ` · ${ESC.nuevos} nuevos` : "");
   else txt = FUENTE ? `${FUENTE.tipo === "onedrive" ? "OneDrive" : "Carpeta"}: ${FUENTE.nombre}` : "Sin carpeta elegida";
@@ -294,7 +301,8 @@ async function pintarAviso() {
   const el = $("#aviso");
   let html = "";
   const f = fuenteObj();
-  if (!FUENTE) html = `Elige de dónde salen tus documentos. <button data-av="inicio" class="primary">Empezar</button>`;
+  if (CONSULTA) html = "";
+  else if (!FUENTE) html = `Elige de dónde salen tus documentos. <button data-av="inicio" class="primary">Empezar</button>`;
   else if (!(await f.listo(false))) {
     html = FUENTE.tipo === "carpeta" ? `Para buscar cambios y abrir archivos, Encuéntralo necesita permiso para leer «${esc(FUENTE.nombre)}». <button data-av="permiso" class="primary">Dar acceso</button>`
       : FUENTE.tipo === "seleccion" ? `Para buscar cambios y abrir archivos, vuelve a elegir la carpeta «${esc(FUENTE.nombre)}». <button data-av="seleccion" class="primary">Elegir carpeta</button>`
@@ -318,8 +326,33 @@ alCambiarEscaneo = (cambios) => {
   // durante el primer escaneo los documentos van apareciendo poco a poco
   if (ESC.activo && DOCS.size !== tamAntes && Date.now() - pintadoEn > 2000) { tamAntes = DOCS.size; pintadoEn = Date.now(); pintar(); }
   if (!ESC.activo && (cambios || DOCS.size !== tamAntes)) { tamAntes = DOCS.size; pintar(); }
-  if (!ESC.activo) pintarAviso();
+  if (!ESC.activo) { pintarAviso(); programarPublicacion(); }
 };
+
+// ------------------------------------------------------------ publicar para alumnos
+// tras cada escaneo o cambio, si está activado, se sube el índice (solo si ha cambiado algo)
+let tPub;
+function programarPublicacion() {
+  if (CONSULTA || !PUB.listo() || !PUB.cfg.auto) return;
+  clearTimeout(tPub);
+  tPub = setTimeout(async () => {
+    try {
+      const r = await publicar(false);
+      if (!r.sinCambios) toast(`Publicado para alumnos: ${r.n} documentos`);
+    } catch (e) { toast("No se pudo publicar para alumnos: " + e.message); }
+    pintarPublicar();
+  }, 4000);
+}
+function pintarPublicar() {
+  const c = PUB.cfg;
+  const sinSp = [...DOCS.values()].filter((d) => d.estado === "ok" && !d.enlace && !urlSharepoint(d)).length;
+  $("#pubEstado").innerHTML = [
+    c.error ? `<span class="err-txt">${esc(c.error)}</span>`
+      : c.ultima ? `Última publicación: ${fmtFecha(c.ultima.fecha.slice(0, 10))} a las ${c.ultima.fecha.slice(11, 16)} · ${c.ultima.n} documentos`
+      : PUB.listo() ? "Todavía no se ha publicado." : "",
+    sinSp ? `${sinSp} documento(s) sin botón para abrir: falta la URL de SharePoint de su módulo (arriba).` : "",
+  ].filter(Boolean).join("<br>");
+}
 
 // ------------------------------------------------------------ acciones de cada documento
 // lo que el navegador sabe mostrar se abre en otra pestaña; el resto se descarga
@@ -371,7 +404,7 @@ async function accion(ev, d, sp) {
       d.estado = act === "ocultar" ? "oculto" : "ok";
       await BD.guardar([d]);
       if (act === "ocultar") toast("Ocultado. Puedes restaurarlo en Ajustes → ver ocultos.");
-      pintar();
+      pintar(); programarPublicacion();
     }
     if (act === "quitar") { DOCS.delete(d.ruta); await BD.quitar([d.ruta]); pintar(); }
   } catch (e) { toast(e.message); }
@@ -406,7 +439,7 @@ function editar(d) {
   $("#edAuto").onclick = async () => {
     Object.assign(d, { manual: false, fechaManual: false });
     preparar(recalcular(d)); await BD.guardar([d]);
-    dlg.close("x"); pintar();
+    dlg.close("x"); pintar(); programarPublicacion();
   };
   dlg.returnValue = "";
   dlg.showModal();
@@ -422,7 +455,7 @@ function editar(d) {
     d.notas = $("#edNotas").value.trim();
     preparar(recalcular(d));
     await BD.guardar([d]);
-    pintar();
+    pintar(); programarPublicacion();
   };
 }
 
@@ -493,6 +526,12 @@ function abrirAjustes() {
   $("#reglasHerr").value = reglasATexto(AJ.reglas.herramientas);
   $("#reglasTemas").value = reglasATexto(AJ.reglas.temas);
   $("#temasIgn").value = AJ.temasIgnorados.join(", ");
+  $("#pubToken").value = PUB.cfg.token;
+  $("#pubRepo").value = PUB.cfg.repo;
+  $("#pubTexto").checked = PUB.cfg.texto;
+  $("#pubAuto").checked = PUB.cfg.auto;
+  $("#pubUrl").value = urlAlumnos();
+  pintarPublicar();
   const fuera = [...DOCS.values()].filter((d) => d.estado !== "ok").length;
   $("#nOcultos").textContent = fuera ? `(${fuera})` : "(ninguno)";
   $("#dlgAjustes").returnValue = "";
@@ -512,9 +551,34 @@ $("#dlgAjustes").addEventListener("close", async () => {
     temasIgnorados: $("#temasIgn").value.split(",").map((s) => s.trim()).filter(Boolean),
   });
   await guardarAjustes();
+  leerPublicar();
+  await PUB.guardar();
   await reaplicar();
   pintar();
   toast("Ajustes guardados y aplicados");
+  programarPublicacion();
+});
+function leerPublicar() {
+  const repo = $("#pubRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/+$/, "");
+  const cambia = repo !== PUB.cfg.repo || $("#pubTexto").checked !== PUB.cfg.texto;
+  Object.assign(PUB.cfg, { token: $("#pubToken").value.trim(), repo, texto: $("#pubTexto").checked, auto: $("#pubAuto").checked });
+  if (cambia) PUB.cfg.huella = "";  // otro repositorio u otro contenido: hay que volver a subirlo
+}
+$("#pubAhora").addEventListener("click", async () => {
+  leerPublicar();
+  await PUB.guardar();
+  const b = $("#pubAhora");
+  b.disabled = true; b.textContent = "Publicando…";
+  try {
+    const r = await publicar(true);
+    toast(`Publicado: ${r.n} documentos. Los alumnos lo verán en unos minutos.`);
+  } catch (e) { toast(e.message); }
+  b.disabled = false; b.textContent = "Publicar ahora";
+  pintarPublicar();
+});
+$("#pubCopiar").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("#pubUrl").value); toast("Dirección copiada"); }
+  catch { $("#pubUrl").select(); }
 });
 $("#ajCambiar").addEventListener("click", () => { $("#dlgAjustes").close("cancel"); abrirInicio(); });
 $("#ajSalir").addEventListener("click", () => { OD.salir(); $("#dlgAjustes").close("cancel"); pintarAviso(); toast("Sesión de OneDrive cerrada"); });
@@ -573,12 +637,30 @@ $("#btnEscanear").addEventListener("click", async () => {
 document.addEventListener("keydown", (e) => { if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $("#q").focus(); } });
 // al volver a la pestaña, si hace rato del último escaneo, se buscan cambios
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && FUENTE && (!ESC.ultimo || Date.now() - ESC.ultimo > 5 * 60_000)) escanear();
+  if (document.visibilityState === "visible" && FUENTE && !CONSULTA && (!ESC.ultimo || Date.now() - ESC.ultimo > 5 * 60_000)) escanear();
 });
+
+// los alumnos (o cualquiera sin carpeta elegida) ven el índice publicado por la profe, si lo hay
+function entrarConsulta(pub) {
+  CONSULTA = { generado: pub.generado || "" };
+  document.body.classList.add("consulta");
+  DOCS.clear();
+  for (const d of pub.docs) {
+    DOCS.set(d.ruta, preparar(Object.assign({ estado: "ok", unidades: [], temas: [], herramientas: [], notas: "", texto: "", carpeta: "" }, d)));
+  }
+  pintar(); pintarEstado(); pintarAviso();
+}
 
 (async function init() {
   pintarSelectorVista();
-  try { await cargarIndice(); } catch (e) { toast("No se pudo abrir el almacenamiento del navegador: " + e.message); return; }
+  const forzarConsulta = new URLSearchParams(location.search).has("alumnos");
+  let bd = null;
+  try { await cargarIndice(); await PUB.cargar(); } catch (e) { bd = e; }
+  if (forzarConsulta || bd || !FUENTE) {
+    const pub = await cargarPublicado();
+    if (pub) return entrarConsulta(pub);
+  }
+  if (bd) { toast("No se pudo abrir el almacenamiento del navegador: " + bd.message); return; }
   try {
     if (await OD.alVolver()) {
       const carpeta = sessionStorage.getItem("enc_od_carpeta") ?? CONFIG.carpetaOneDrive;

@@ -303,6 +303,10 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
 .modulo label.check { font-size: 12px; }
 button.link.peligro { color: var(--danger); }
 button:disabled { opacity: .5; cursor: not-allowed; }
+.err-txt { color: var(--danger); }
+.aviso-pub { color: var(--herr-t); }
+/* modo consulta (alumnos): solo buscar y abrir */
+body.consulta #btnEscanear, body.consulta #btnAjustes, body.consulta .vistas a[data-vista="sin_tema"] { display: none; }
 @media (max-width: 800px) {
   .modulo { grid-template-columns: 1fr; }
 }

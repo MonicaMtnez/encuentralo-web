@@ -8,7 +8,8 @@ contenido.
 - **Tus documentos no se suben a ningún sitio.** En GitHub solo está el código de la página. Los archivos se leen
   desde tu ordenador, o desde tu OneDrive si eliges esa opción, y el índice se guarda en tu navegador.
 
-Tiempo: unos 15 minutos la primera vez.
+Tiempo: unos 15 minutos la primera vez, y 10 más si quieres que tus alumnos lo usen desde Teams
+([sección 10](#10-para-tus-alumnos-pestaña-de-teams)).
 
 ---
 
@@ -162,6 +163,78 @@ Después, en la página: **Ajustes → Cambiar… → Mi OneDrive personal → I
 
 ---
 
+## 10. Para tus alumnos: pestaña de Teams
+
+Tus alumnos pueden buscar en todo el material de la clase desde una pestaña de Teams, **sin configurar nada**. Funciona
+así: tu Encuéntralo, cada vez que lo abres y hay cambios, sube a tu repositorio de GitHub un archivo con el índice
+(`docs/indice.json`). Tu página lo publica y, abierta por los alumnos, muestra ese índice en **modo consulta**: buscar,
+filtrar y **Abrir**, que lleva al archivo en el SharePoint de la clase con su cuenta de educantabria.
+
+> **Antes de activarlo:** el índice publicado es **público**. Cualquiera que tenga la dirección puede ver los nombres
+> de los archivos, las carpetas, tus notas y, si lo marcas, el texto de los documentos (también los enlaces de los
+> archivos `.url`). **Los archivos en sí no**: para abrirlos hay que tener acceso a la clase en SharePoint. Si no quieres
+> que se vea el texto, desmarca **Incluir el texto de los documentos**: los alumnos buscarán por nombre, unidad, tema y
+> notas, pero no dentro de los PDF.
+
+### 10.1 Crear el token de GitHub (una vez)
+
+El token es como una contraseña que solo sirve para que tu Encuéntralo pueda subir ese archivo a **tu** repositorio.
+
+1. En GitHub, arriba a la derecha: tu foto → **Settings**.
+2. Abajo del todo, en el menú de la izquierda: **Developer settings** → **Personal access tokens** →
+   **Fine-grained tokens** → **Generate new token**.
+3. Rellena:
+   - **Token name**: `Encuéntralo`.
+   - **Expiration**: la más larga que te deje (por ejemplo, 1 año). Apunta la fecha: ese día habrá que crear otro.
+   - **Repository access**: **Only select repositories** → elige **tu** copia (`<nombre>` del paso 2).
+   - **Permissions** → **Repository permissions** → **Contents**: **Read and write**. No hace falta nada más.
+4. **Generate token** y copia el código que empieza por `github_pat_…`. Solo se ve una vez; si lo pierdes, crea otro.
+
+No se lo pases a nadie ni lo pegues en otro sitio que no sea tu Encuéntralo. Se guarda solo en tu navegador, y no va
+en la copia de seguridad.
+
+### 10.2 Activar la publicación
+
+1. En tu Encuéntralo: **Ajustes** → **Publicar para alumnos**.
+2. **Token de GitHub**: pega el token. **Repositorio** ya viene puesto (`<usuario>/<nombre>`).
+3. Revisa las dos casillas:
+   - **Incluir el texto de los documentos**: lee el aviso de arriba.
+   - **Publicar automáticamente cuando haya cambios**: déjala marcada.
+4. Comprueba que cada módulo tiene su **URL de SharePoint** (sección 6). Debajo de **Publicar ahora** te avisa si hay
+   documentos sin ella: los alumnos los verían, pero no podrían abrirlos.
+5. Pulsa **Publicar ahora**. Sale *Publicado: N documentos*. En 1 a 3 minutos está en tu página.
+6. **Guardar**.
+
+Desde ahora, cada vez que abras tu Encuéntralo, edites algo o cambies los ajustes, se publica solo si hay cambios.
+
+### 10.3 Poner la pestaña en Teams
+
+1. En **Ajustes → Publicar para alumnos**, copia la **Dirección para la pestaña de Teams**
+   (`https://<usuario>.github.io/<nombre>/?alumnos`).
+2. En Teams, en la clase → el canal donde quieras la pestaña (por ejemplo, **General**) → **+** (Agregar una pestaña) →
+   **Sitio web**.
+3. **Nombre de la pestaña**: `Apuntes` (o el que quieras). **URL**: pega la dirección → **Guardar**.
+
+Si tu centro no deja añadir pestañas de **Sitio web**, publica la dirección en el canal y fíjala: funciona igual en el
+navegador y en el móvil.
+
+> El `?alumnos` del final hace que **tú** también veas el modo consulta en esa pestaña, para comprobar lo que ven
+> ellos. Tu Encuéntralo normal sigue siendo la dirección sin `?alumnos`.
+
+### 10.4 Qué ven los alumnos
+
+- Todo el material de la clase, con buscador y filtros por módulo, unidad, tema, herramienta, carpeta y fecha.
+- Tus **notas** y las etiquetas que hayas corregido a mano.
+- **Abrir**: el archivo en el SharePoint de la clase, con su cuenta. **Abrir enlace** en los enlaces.
+- La marca **nuevo** en lo que hayas añadido en los últimos 3 días.
+- Abajo a la izquierda, cuándo se publicó por última vez.
+- No pueden editar, ocultar ni cambiar nada.
+
+Lo nuevo que subas a Teams lo ven **cuando abras tu Encuéntralo** (o pulses **Publicar ahora**), más 1 a 3 minutos
+de GitHub. Si no lo abres, siguen viendo la última publicación.
+
+---
+
 ## Si algo falla
 
 | Qué pasa | Qué hacer |
@@ -172,5 +245,9 @@ Después, en la página: **Ajustes → Cambiar… → Mi OneDrive personal → I
 | Un PDF no se encuentra por su contenido | Es un PDF escaneado (una imagen): no tiene texto. Se puede buscar por nombre o ponerle etiquetas con **Editar** |
 | El botón SharePoint da error | Revisa en Ajustes que la URL de ese módulo sea de esa clase |
 | No aparece **Sync fork** | Tu copia ya está al día |
+| *GitHub: el token no es válido o ha caducado* | Ha pasado la fecha de caducidad del token. Crea otro (10.1) y pégalo en Ajustes |
+| *GitHub: el token no tiene permiso de escritura…* | Al crear el token no elegiste tu repositorio o no diste **Contents: Read and write**. Créalo otra vez (10.1) |
+| Los alumnos no ven lo último | Abre tu Encuéntralo o pulsa **Publicar ahora**, y espera 1 a 3 minutos. En Teams, recarga la pestaña |
+| Los alumnos ven un documento pero sin botón **Abrir** | Falta la URL de SharePoint de ese módulo (sección 6) |
 
 Si nada de esto lo arregla, pregunta a Juan.
