@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encuéntralo</title>
+<meta name="description" content="Busca en tus apuntes de clase: todo se queda en tu navegador.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+<link rel="stylesheet" href="style.css">
+<!-- librerías para leer PDF y Office (si no hay internet se indexa solo el nombre y se reintenta luego) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="motor.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5C5.5 4 9 4 12 6c3-2 6.5-2 9-.5V19c-2.5-1.5-6-1.5-9 .5-3-2-6.5-2-9-.5z"/><path d="M12 6v13.5"/></svg> Encuéntralo</div>
+  <div class="top-main">
+    <div class="search">
+      <span class="sicon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <input id="q" type="search" placeholder="Buscar en nombres, etiquetas, notas y contenido…" autocomplete="off">
+    </div>
+    <div class="actions">
+      <button id="btnEscanear" class="icon" title="Buscar cambios en la carpeta ahora"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></button>
+      <button id="btnAjustes" class="icon" title="Carpeta, módulos, reglas y copia de seguridad"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="side" id="side">
+    <nav class="vistas">
+      <a data-vista="" class="on"><span>Todo</span> <span class="n" id="cTotal"></span></a>
+      <a data-vista="sin_tema"><span>Sin tema</span> <span class="n" id="cSin"></span></a>
+    </nav>
+    <section><h3>Módulos</h3><ul id="fModulos" class="facet"></ul></section>
+    <section><h3>Unidades</h3><ul id="fUnidades" class="facet"></ul></section>
+    <section><h3>Herramientas</h3><ul id="fHerr" class="facet"></ul></section>
+    <section><h3>Temas</h3><ul id="fTemas" class="facet"></ul></section>
+    <section><h3>Carpetas</h3><ul id="fSecciones" class="facet"></ul></section>
+    <section><h3>Fecha</h3>
+      <div class="rapidos" id="rapidos">
+        <button type="button" data-dias="7">7 días</button>
+        <button type="button" data-dias="30">30 días</button>
+      </div>
+      <ul id="fMeses" class="facet"></ul>
+    </section>
+    <section><h3>Tipo de archivo</h3><ul id="fTipos" class="facet"></ul></section>
+    <div class="scan" id="scan">
+      <span class="dot"></span><span id="scanTxt">—</span>
+    </div>
+  </aside>
+
+  <main>
+    <div id="aviso" class="aviso" hidden></div>
+    <div class="bar">
+      <div id="chips" class="chips"></div>
+      <div class="bar-right">
+        <span id="count" class="muted"></span>
+        <div class="seg" id="vistas" role="group" aria-label="Vista">
+          <button type="button" data-v="lista" title="Lista"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/></svg></button>
+          <button type="button" data-v="grid" class="no-movil" title="Cuadrícula"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+          <button type="button" data-v="compacta" title="Compacta"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
+        </div>
+        <select id="orden">
+          <option value="">Orden: automático</option>
+          <option value="fecha">Más recientes</option>
+          <option value="fecha_asc">Más antiguos</option>
+          <option value="detectado">Detectados recientemente</option>
+          <option value="nombre">Nombre</option>
+        </select>
+        <button id="btnFiltros" class="only-mobile">Filtros</button>
+      </div>
+    </div>
+    <ul id="lista" class="lista"></ul>
+    <div class="more"><button id="btnMas" hidden>Cargar más</button></div>
+  </main>
+</div>
+
+<!-- Primera vez: elegir de dónde salen los documentos -->
+<dialog id="dlgInicio">
+  <form method="dialog">
+    <h2>Encuéntralo</h2>
+    <p class="hint">Busca en tus apuntes por módulo, unidad, tema, fecha y contenido. Todo se queda en este navegador: los archivos no se suben a ningún sitio.</p>
+    <p class="hint">Elige la carpeta donde están. Cada subcarpeta cuenta como un módulo (<code>AFI/</code>, <code>SOR/</code>…); también vale una carpeta con las clases de Teams sincronizadas con OneDrive.</p>
+    <div class="opcion">
+      <h3>Carpeta de este ordenador</h3>
+      <p class="hint" id="inCarpetaHint">Por ejemplo, tu carpeta de OneDrive sincronizada. En Chrome y Edge se recuerda; en otros navegadores hay que elegirla en cada visita.</p>
+      <button type="button" class="primary" id="inCarpeta">Elegir carpeta</button>
+      <input type="file" id="inSeleccion" webkitdirectory multiple hidden>
+    </div>
+    <div class="opcion">
+      <h3>Mi OneDrive personal</h3>
+      <p class="hint" id="inOdHint">Lee directamente de tu OneDrive (cuenta Microsoft personal), también desde el móvil.</p>
+      <div class="addrow">
+        <input id="inOdCarpeta" placeholder="Carpeta de OneDrive, p. ej. Indexatodo">
+        <button type="button" id="inOd">Iniciar sesión con Microsoft</button>
+      </div>
+      <details id="inOdAvanzado"><summary class="hint">Id. de la aplicación</summary>
+        <input id="inClientId" placeholder="Id. de aplicación (cliente) de Azure" spellcheck="false">
+      </details>
+    </div>
+    <div class="dlg-actions"><button value="cancel" formnovalidate>Ahora no</button></div>
+  </form>
+</dialog>
+
+<!-- Editar -->
+<dialog id="dlgEditar">
+  <form method="dialog" id="formEditar">
+    <h2 id="edNombre"></h2>
+    <p class="muted small" id="edRuta"></p>
+    <div class="row2">
+      <label>Módulo <input id="edModulo" list="dlModulos"></label>
+      <label>Fecha <input type="date" id="edFecha"></label>
+    </div>
+    <label>Unidades</label>
+    <div class="tagedit" data-tipo="unidades"></div>
+    <label>Herramientas</label>
+    <div class="tagedit" data-tipo="herramientas"></div>
+    <label>Temas</label>
+    <div class="tagedit" data-tipo="temas"></div>
+    <label>Notas <textarea id="edNotas" rows="3"></textarea></label>
+    <details><summary>Texto extraído</summary><pre id="edExtracto"></pre></details>
+    <div class="dlg-actions">
+      <button type="button" id="edAuto" class="link" title="Descarta tus cambios y vuelve a lo automático">Volver a lo automático</button>
+      <span class="grow"></span>
+      <button value="cancel" formnovalidate>Cancelar</button>
+      <button class="primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Ajustes -->
+<dialog id="dlgAjustes" class="wide">
+  <form method="dialog" id="formAjustes">
+    <h2>Ajustes</h2>
+    <h3>De dónde salen los documentos</h3>
+    <p class="fuente" id="ajFuente"></p>
+    <div class="botones">
+      <button type="button" id="ajCambiar">Cambiar…</button>
+      <button type="button" id="ajSalir" hidden>Cerrar sesión de OneDrive</button>
+    </div>
+
+    <h3>Módulos</h3>
+    <p class="hint">Pega en cada módulo cualquier URL de su clase abierta en SharePoint (Teams → la clase → Archivos → Abrir en SharePoint) para tener el botón «SharePoint» en cada documento.</p>
+    <div id="modulos"></div>
+
+    <h3>Reglas de etiquetado automático</h3>
+    <p class="hint">Una línea por etiqueta: <code>Nombre: palabra, otra palabra, .ext</code>. Las que empiezan por punto son extensiones. Se buscan en el nombre, la ruta y (con 3+ apariciones) en el contenido.</p>
+    <div class="row2">
+      <label>Herramientas <textarea id="reglasHerr" rows="10" spellcheck="false"></textarea></label>
+      <label>Temas <textarea id="reglasTemas" rows="10" spellcheck="false"></textarea></label>
+    </div>
+    <label>Subcarpetas que no cuentan como tema <input id="temasIgn" placeholder="General, Documentos…"></label>
+
+    <h3>Copia de seguridad</h3>
+    <p class="hint">Guarda tus ajustes, etiquetas editadas, notas y ocultos en un archivo. Sirve si borras los datos del navegador o cambias de ordenador (el texto de los documentos se vuelve a sacar solo).</p>
+    <div class="botones">
+      <button type="button" id="ajExportar">Exportar</button>
+      <button type="button" id="ajImportar">Importar…</button>
+      <input type="file" id="ajImportarArchivo" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint">Documentos ocultos o que ya no están en la carpeta: <button type="button" id="btnVerOcultos" class="link">ver <span id="nOcultos"></span></button></p>
+
+    <div class="dlg-actions">
+      <button type="button" id="ajBorrar" class="link peligro" title="Borra el índice de este navegador (no toca tus archivos)">Borrar índice</button>
+      <span class="grow"></span>
+      <button value="cancel" formnovalidate>Cancelar</button>
+      <button class="primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="dlTemas"></datalist>
+<datalist id="dlHerr"></datalist>
+<datalist id="dlModulos"></datalist>
+<datalist id="dlUnidades"></datalist>
+<div id="toast" class="toast" hidden></div>
+</body>
+</html>
